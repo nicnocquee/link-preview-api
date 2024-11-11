@@ -22,18 +22,31 @@ async function fetchPreview(url) {
 
     const urlObj = new URL(url);
 
-    // Check if domain resolves to local IP
+    // Try to lookup using the system's resolver (including hosts file)
     let isLocalDomain = false;
     try {
-      const addresses = await dns.resolve4(urlObj.hostname);
-      console.log(`[Preview Service] DNS resolved to:`, addresses);
-      isLocalDomain = addresses.some((ip) => isPrivateIP(ip));
+      const lookupResult = await new Promise((resolve, reject) => {
+        require("dns").lookup(urlObj.hostname, (err, address, family) => {
+          if (err) reject(err);
+          else resolve({ address, family });
+        });
+      });
+
+      console.log(`[Preview Service] DNS lookup resolved to:`, lookupResult);
+      isLocalDomain =
+        lookupResult.address === "127.0.0.1" ||
+        lookupResult.address === "localhost" ||
+        lookupResult.address.startsWith("192.168.") ||
+        lookupResult.address.startsWith("10.") ||
+        (lookupResult.address.startsWith("172.") &&
+          parseInt(lookupResult.address.split(".")[1]) >= 16 &&
+          parseInt(lookupResult.address.split(".")[1]) <= 31);
+
       console.log(`[Preview Service] Is local domain: ${isLocalDomain}`);
     } catch (dnsError) {
-      console.error(`[Preview Service] DNS resolution failed:`, dnsError);
+      console.error(`[Preview Service] DNS lookup failed:`, dnsError);
     }
 
-    // Create custom agent only for local domains
     const agent = isLocalDomain
       ? new https.Agent({ rejectUnauthorized: false })
       : undefined;
@@ -62,7 +75,6 @@ async function fetchPreview(url) {
       timeout: 15000,
       follow: 5,
     });
-
     clearTimeout(timeout);
 
     console.log(`[Preview Service] Response received:`, {
