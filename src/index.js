@@ -5,6 +5,7 @@ const { setupCache } = require("./middleware/cache");
 const { fetchPreview } = require("./services/preview");
 
 const app = express();
+app.set("trust proxy", true);
 const port = process.env.PORT || 3000;
 
 // Redis client
