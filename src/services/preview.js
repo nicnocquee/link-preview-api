@@ -15,19 +15,17 @@ async function fetchPreview(url) {
     const isLocalDomain = localDomains.includes(urlObj.hostname);
     console.log(`[Preview Service] Is local domain: ${isLocalDomain}`);
 
-    const agent = isLocalDomain
-      ? new https.Agent({
-          rejectUnauthorized: false,
-          lookup: (hostname, options, callback) => {
-            // Force local domains to resolve to localhost
-            if (isLocalDomain) {
-              callback(null, "127.0.0.1", 4);
-            } else {
-              require("dns").lookup(hostname, options, callback);
-            }
-          },
-        })
-      : undefined;
+    const agent = new https.Agent({
+      rejectUnauthorized: isLocalDomain ? false : true,
+      lookup: (hostname, opts, callback) => {
+        if (isLocalDomain) {
+          // For local domains, return localhost IP
+          return callback(null, "127.0.0.1", 4);
+        }
+        // For all other domains, use normal DNS lookup
+        return dns.lookup(hostname, opts, callback);
+      },
+    });
 
     const controller = new AbortController();
     const timeout = setTimeout(() => {
@@ -47,12 +45,14 @@ async function fetchPreview(url) {
         Accept:
           "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.5",
-        Host: urlObj.host, // Keep original host header
+        Host: urlObj.host,
       },
       agent: agent,
       timeout: 30000,
       follow: 5,
     });
+
+    clearTimeout(timeout);
 
     clearTimeout(timeout);
 
