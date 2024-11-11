@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  api:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - RATE_LIMIT_WINDOW=900000 # 15 minutes in milliseconds
+      - RATE_LIMIT_MAX=100 # maximum requests per window
+      - CACHE_DURATION=3600 # cache duration in seconds
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+volumes:
+  redis_data:
