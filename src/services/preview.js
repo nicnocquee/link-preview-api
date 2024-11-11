@@ -1,9 +1,7 @@
 const fetch = require("node-fetch");
 const cheerio = require("cheerio");
 const https = require("https");
-const dns = require("dns").promises;
 
-// Get local domains from env var
 const localDomains = (process.env.LOCAL_DOMAINS || "")
   .split(",")
   .map((d) => d.trim())
@@ -14,19 +12,28 @@ async function fetchPreview(url) {
     console.log(`[Preview Service] Starting fetch for URL: ${url}`);
     const urlObj = new URL(url);
 
-    // Check if domain is in LOCAL_DOMAINS list
     const isLocalDomain = localDomains.includes(urlObj.hostname);
     console.log(`[Preview Service] Is local domain: ${isLocalDomain}`);
 
     const agent = isLocalDomain
-      ? new https.Agent({ rejectUnauthorized: false })
+      ? new https.Agent({
+          rejectUnauthorized: false,
+          lookup: (hostname, options, callback) => {
+            // Force local domains to resolve to localhost
+            if (isLocalDomain) {
+              callback(null, "127.0.0.1", 4);
+            } else {
+              require("dns").lookup(hostname, options, callback);
+            }
+          },
+        })
       : undefined;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => {
       console.log(`[Preview Service] Request timed out, aborting...`);
       controller.abort();
-    }, 30000); // Increased timeout to 30 seconds
+    }, 30000);
 
     console.log(
       `[Preview Service] Initiating fetch request with${
@@ -40,11 +47,13 @@ async function fetchPreview(url) {
         Accept:
           "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.5",
+        Host: urlObj.host, // Keep original host header
       },
       agent: agent,
       timeout: 30000,
       follow: 5,
     });
+
     clearTimeout(timeout);
 
     console.log(`[Preview Service] Response received:`, {
