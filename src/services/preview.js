@@ -7,10 +7,10 @@ async function fetchPreview(url) {
   const $ = cheerio.load(html);
 
   const title =
-    $("title").text() || $('meta[property="og:title"]').attr("content");
+    $('meta[property="og:title"]').attr("content") || $("title").text();
   const description =
-    $('meta[name="description"]').attr("content") ||
-    $('meta[property="og:description"]').attr("content");
+    $('meta[property="og:description"]').attr("content") ||
+    $('meta[name="description"]').attr("content");
   const image = $('meta[property="og:image"]').attr("content");
 
   return {
