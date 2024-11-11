@@ -27,7 +27,7 @@ The response will be a JSON object:
 npm install
 
 # Run local redis
-docker-compose up redis
+docker-compose -f docker-compose.dev.yml up
 
 # Run in development mode with auto-reload
 npm run dev
