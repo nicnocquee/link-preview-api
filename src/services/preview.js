@@ -2,18 +2,48 @@ const fetch = require("node-fetch");
 const cheerio = require("cheerio");
 const dns = require("dns").promises;
 
+const DOMAIN_MAPPINGS = (process.env.DOMAIN_MAPPINGS || "")
+  .split(",")
+  .reduce((acc, mapping) => {
+    if (mapping) {
+      // Split by : but handle cases with and without port
+      const parts = mapping.split(":");
+      const domain = parts[0];
+      const ip = parts[1];
+      const port = parts.length > 2 ? parts[2] : null;
+      acc[domain] = { ip, port };
+    }
+    return acc;
+  }, {});
+
 async function fetchPreview(url) {
   try {
     console.log(`[Preview Service] Starting fetch for URL: ${url}`);
-
-    // First try to resolve the domain
     const urlObj = new URL(url);
-    try {
-      console.log(`[Preview Service] Resolving DNS for ${urlObj.hostname}`);
-      const addresses = await dns.resolve4(urlObj.hostname);
-      console.log(`[Preview Service] DNS resolved to:`, addresses);
-    } catch (dnsError) {
-      console.error(`[Preview Service] DNS resolution failed:`, dnsError);
+
+    // Check domain mappings
+    const mapping = DOMAIN_MAPPINGS[urlObj.hostname];
+    if (mapping) {
+      console.log(
+        `[Preview Service] Using domain mapping for ${urlObj.hostname}: ${
+          mapping.ip
+        }${mapping.port ? ":" + mapping.port : ""}`
+      );
+      // Construct new URL using the mapping, only add port if it exists
+      const mappedUrl = `http://${mapping.ip}${
+        mapping.port ? ":" + mapping.port : ""
+      }${urlObj.pathname}${urlObj.search}`;
+      url = mappedUrl;
+      console.log(`[Preview Service] Mapped URL: ${url}`);
+    } else {
+      // Original DNS resolution code
+      try {
+        console.log(`[Preview Service] Resolving DNS for ${urlObj.hostname}`);
+        const addresses = await dns.resolve4(urlObj.hostname);
+        console.log(`[Preview Service] DNS resolved to:`, addresses);
+      } catch (dnsError) {
+        console.error(`[Preview Service] DNS resolution failed:`, dnsError);
+      }
     }
 
     const controller = new AbortController();
