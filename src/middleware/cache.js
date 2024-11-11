@@ -12,13 +12,15 @@ function setupCache(redis) {
       // Store the original send function
       const originalSend = res.send;
       res.send = function (body) {
-        // Cache the response before sending
-        redis.set(
-          cacheKey,
-          body,
-          "EX",
-          parseInt(process.env.CACHE_DURATION) || 3600 // 1 hour default
-        );
+        // Only cache if response status is 200
+        if (res.statusCode === 200) {
+          redis.set(
+            cacheKey,
+            body,
+            "EX",
+            parseInt(process.env.CACHE_DURATION) || 3600 // 1 hour default
+          );
+        }
 
         // Call the original send function
         originalSend.call(this, body);
