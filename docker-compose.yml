@@ -12,6 +12,12 @@ services:
       - CACHE_DURATION=3600 # cache duration in seconds
     depends_on:
       - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   redis:
     image: redis:alpine

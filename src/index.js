@@ -22,6 +22,17 @@ async function startServer() {
     app.use(await setupRateLimiter(redis));
     app.use(setupCache(redis));
 
+    // Health check endpoint
+    app.get("/health", async (req, res) => {
+      try {
+        // Check Redis connection
+        await redis.ping();
+        res.status(200).json({ status: "healthy", redis: "connected" });
+      } catch (error) {
+        res.status(503).json({ status: "unhealthy", redis: "disconnected" });
+      }
+    });
+
     // Routes
     app.get("/api/v1/preview", async (req, res) => {
       try {
