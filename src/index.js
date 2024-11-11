@@ -41,7 +41,7 @@ async function startServer() {
         if (!url) {
           return res.status(400).json({ error: "URL parameter is required" });
         }
-
+        console.log("Fetching preview...");
         const preview = await fetchPreview(url);
         res.json(preview);
       } catch (error) {
