@@ -30,6 +30,7 @@ async function fetchPreview(url) {
         Accept:
           "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.5",
+        Host: new URL(url).host, // Explicitly set the Host header
       },
       timeout: 15000,
       follow: 5, // follow up to 5 redirects
