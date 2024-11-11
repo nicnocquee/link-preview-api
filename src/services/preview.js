@@ -1,43 +1,28 @@
 const fetch = require("node-fetch");
 const cheerio = require("cheerio");
-const https = require("https");
-
-const localDomains = (process.env.LOCAL_DOMAINS || "")
-  .split(",")
-  .map((d) => d.trim())
-  .filter(Boolean);
+const dns = require("dns").promises;
 
 async function fetchPreview(url) {
   try {
     console.log(`[Preview Service] Starting fetch for URL: ${url}`);
+
+    // First try to resolve the domain
     const urlObj = new URL(url);
-
-    const isLocalDomain = localDomains.includes(urlObj.hostname);
-    console.log(`[Preview Service] Is local domain: ${isLocalDomain}`);
-
-    const agent = new https.Agent({
-      rejectUnauthorized: isLocalDomain ? false : true,
-      lookup: (hostname, opts, callback) => {
-        if (isLocalDomain) {
-          // For local domains, return localhost IP
-          return callback(null, "127.0.0.1", 4);
-        }
-        // For all other domains, use normal DNS lookup
-        return dns.lookup(hostname, opts, callback);
-      },
-    });
+    try {
+      console.log(`[Preview Service] Resolving DNS for ${urlObj.hostname}`);
+      const addresses = await dns.resolve4(urlObj.hostname);
+      console.log(`[Preview Service] DNS resolved to:`, addresses);
+    } catch (dnsError) {
+      console.error(`[Preview Service] DNS resolution failed:`, dnsError);
+    }
 
     const controller = new AbortController();
     const timeout = setTimeout(() => {
       console.log(`[Preview Service] Request timed out, aborting...`);
       controller.abort();
-    }, 30000);
+    }, 15000); // increased timeout to 15 seconds
 
-    console.log(
-      `[Preview Service] Initiating fetch request with${
-        isLocalDomain ? " local" : " external"
-      } domain config`
-    );
+    console.log(`[Preview Service] Initiating fetch request`);
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
@@ -45,14 +30,11 @@ async function fetchPreview(url) {
         Accept:
           "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.5",
-        Host: urlObj.host,
+        Host: new URL(url).host, // Explicitly set the Host header
       },
-      agent: agent,
-      timeout: 30000,
-      follow: 5,
+      timeout: 15000,
+      follow: 5, // follow up to 5 redirects
     });
-
-    clearTimeout(timeout);
 
     clearTimeout(timeout);
 
