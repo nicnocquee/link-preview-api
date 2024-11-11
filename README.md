@@ -41,6 +41,25 @@ This will map:
 - Requests to api.internal → 192.168.1.100:8080
 - Requests to test.local → 10.0.0.50:3000
 
+## Caching
+
+The API implements Redis-based caching to improve performance and reduce redundant requests. When a URL is requested, the API first checks if a cached preview exists. If found, it returns the cached data instead of fetching it again.
+
+Configuration:
+
+- `CACHE_DURATION`: Duration in seconds to cache previews (defaults to 3600 seconds/1 hour)
+
+## Rate Limiting
+
+To prevent abuse, the API includes Redis-based rate limiting per IP address.
+
+Configuration:
+
+- `RATE_LIMIT_WINDOW`: Time window in milliseconds (defaults to 15 minutes)
+- `RATE_LIMIT_MAX`: Maximum number of requests per IP within the window (defaults to 100 requests)
+
+When the rate limit is exceeded, the API returns a 429 status code with the message "Too many requests from this IP, please try again later."
+
 ## Development
 
 ```bash
