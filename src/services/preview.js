@@ -3,49 +3,20 @@ const cheerio = require("cheerio");
 const https = require("https");
 const dns = require("dns").promises;
 
-// Function to check if IP is private/local
-function isPrivateIP(ip) {
-  // Convert IP to parts
-  const parts = ip.split(".").map((part) => parseInt(part, 10));
-
-  return (
-    parts[0] === 127 || // localhost
-    parts[0] === 10 || // Class A private network
-    (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) || // Class B private network
-    (parts[0] === 192 && parts[1] === 168) // Class C private network
-  );
-}
+// Get local domains from env var
+const localDomains = (process.env.LOCAL_DOMAINS || "")
+  .split(",")
+  .map((d) => d.trim())
+  .filter(Boolean);
 
 async function fetchPreview(url) {
   try {
     console.log(`[Preview Service] Starting fetch for URL: ${url}`);
-
     const urlObj = new URL(url);
 
-    // Try to lookup using the system's resolver (including hosts file)
-    let isLocalDomain = false;
-    try {
-      const lookupResult = await new Promise((resolve, reject) => {
-        require("dns").lookup(urlObj.hostname, (err, address, family) => {
-          if (err) reject(err);
-          else resolve({ address, family });
-        });
-      });
-
-      console.log(`[Preview Service] DNS lookup resolved to:`, lookupResult);
-      isLocalDomain =
-        lookupResult.address === "127.0.0.1" ||
-        lookupResult.address === "localhost" ||
-        lookupResult.address.startsWith("192.168.") ||
-        lookupResult.address.startsWith("10.") ||
-        (lookupResult.address.startsWith("172.") &&
-          parseInt(lookupResult.address.split(".")[1]) >= 16 &&
-          parseInt(lookupResult.address.split(".")[1]) <= 31);
-
-      console.log(`[Preview Service] Is local domain: ${isLocalDomain}`);
-    } catch (dnsError) {
-      console.error(`[Preview Service] DNS lookup failed:`, dnsError);
-    }
+    // Check if domain is in LOCAL_DOMAINS list
+    const isLocalDomain = localDomains.includes(urlObj.hostname);
+    console.log(`[Preview Service] Is local domain: ${isLocalDomain}`);
 
     const agent = isLocalDomain
       ? new https.Agent({ rejectUnauthorized: false })
@@ -55,7 +26,7 @@ async function fetchPreview(url) {
     const timeout = setTimeout(() => {
       console.log(`[Preview Service] Request timed out, aborting...`);
       controller.abort();
-    }, 15000);
+    }, 30000); // Increased timeout to 30 seconds
 
     console.log(
       `[Preview Service] Initiating fetch request with${
@@ -69,10 +40,9 @@ async function fetchPreview(url) {
         Accept:
           "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.5",
-        Host: urlObj.host,
       },
       agent: agent,
-      timeout: 15000,
+      timeout: 30000,
       follow: 5,
     });
     clearTimeout(timeout);
