@@ -92,7 +92,7 @@ async function fetchPreview(url) {
         $('meta[name="description"]').attr("content") ||
         "",
       image: $('meta[property="og:image"]').attr("content") || "",
-      url,
+      url: urlObj.href,
     };
 
     console.log(`[Preview Service] Parsed preview data:`, result);
