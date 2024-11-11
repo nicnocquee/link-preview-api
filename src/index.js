@@ -1,4 +1,5 @@
 const express = require("express");
+const cors = require("express");
 const { createClient } = require("redis");
 const { setupRateLimiter } = require("./middleware/rate-limiter");
 const { setupCache } = require("./middleware/cache");
@@ -7,6 +8,9 @@ const { fetchPreview } = require("./services/preview");
 const app = express();
 app.set("trust proxy", "127.0.0.1");
 const port = process.env.PORT || 3000;
+
+// Enable CORS
+app.use(cors());
 
 // Redis client
 const redis = createClient({
