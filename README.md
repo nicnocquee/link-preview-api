@@ -20,6 +20,27 @@ The response will be a JSON object:
 }
 ```
 
+## Domain Mappings
+
+The API supports custom domain mappings for scenarios where you need to redirect requests to specific IP addresses and ports. This is useful for testing or when dealing with internal networks.
+
+Configure domain mappings using the `DOMAIN_MAPPINGS` environment variable in the format:
+
+```
+DOMAIN_MAPPINGS=domain1:ip:port,domain2:ip:port
+```
+
+Example:
+
+```
+DOMAIN_MAPPINGS=api.internal:192.168.1.100:8080,test.local:10.0.0.50:3000
+```
+
+This will map:
+
+- Requests to api.internal → 192.168.1.100:8080
+- Requests to test.local → 10.0.0.50:3000
+
 ## Development
 
 ```bash

@@ -10,7 +10,10 @@ services:
       - RATE_LIMIT_WINDOW=900000 # 15 minutes in milliseconds
       - RATE_LIMIT_MAX=100 # maximum requests per window
       - CACHE_DURATION=3600 # cache duration in seconds
-      - DOMAIN_MAPPINGS=${DOMAIN_MAPPINGS} # Format: domain1:ip:port,domain2:ip:port
+      # Domain mappings allow redirecting requests to specific IPs and ports
+      # Format: domain1:ip:port,domain2:ip:port
+      # Example: api.internal:192.168.1.100:8080,test.local:10.0.0.50:3000
+      - DOMAIN_MAPPINGS=${DOMAIN_MAPPINGS}
     depends_on:
       - redis
     healthcheck:
