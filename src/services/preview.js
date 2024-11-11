@@ -1,28 +1,54 @@
 const fetch = require("node-fetch");
 const cheerio = require("cheerio");
+const https = require("https");
 const dns = require("dns").promises;
+
+// Function to check if IP is private/local
+function isPrivateIP(ip) {
+  // Convert IP to parts
+  const parts = ip.split(".").map((part) => parseInt(part, 10));
+
+  return (
+    parts[0] === 127 || // localhost
+    parts[0] === 10 || // Class A private network
+    (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) || // Class B private network
+    (parts[0] === 192 && parts[1] === 168) // Class C private network
+  );
+}
 
 async function fetchPreview(url) {
   try {
     console.log(`[Preview Service] Starting fetch for URL: ${url}`);
 
-    // First try to resolve the domain
     const urlObj = new URL(url);
+
+    // Check if domain resolves to local IP
+    let isLocalDomain = false;
     try {
-      console.log(`[Preview Service] Resolving DNS for ${urlObj.hostname}`);
       const addresses = await dns.resolve4(urlObj.hostname);
       console.log(`[Preview Service] DNS resolved to:`, addresses);
+      isLocalDomain = addresses.some((ip) => isPrivateIP(ip));
+      console.log(`[Preview Service] Is local domain: ${isLocalDomain}`);
     } catch (dnsError) {
       console.error(`[Preview Service] DNS resolution failed:`, dnsError);
     }
+
+    // Create custom agent only for local domains
+    const agent = isLocalDomain
+      ? new https.Agent({ rejectUnauthorized: false })
+      : undefined;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => {
       console.log(`[Preview Service] Request timed out, aborting...`);
       controller.abort();
-    }, 15000); // increased timeout to 15 seconds
+    }, 15000);
 
-    console.log(`[Preview Service] Initiating fetch request`);
+    console.log(
+      `[Preview Service] Initiating fetch request with${
+        isLocalDomain ? " local" : " external"
+      } domain config`
+    );
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
@@ -30,10 +56,11 @@ async function fetchPreview(url) {
         Accept:
           "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.5",
-        Host: new URL(url).host, // Explicitly set the Host header
+        Host: urlObj.host,
       },
+      agent: agent,
       timeout: 15000,
-      follow: 5, // follow up to 5 redirects
+      follow: 5,
     });
 
     clearTimeout(timeout);
