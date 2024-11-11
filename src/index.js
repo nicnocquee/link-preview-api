@@ -36,15 +36,29 @@ async function startServer() {
 
     // Routes
     app.get("/api/v1/preview", async (req, res) => {
+      console.log("===== New Preview Request =====");
+      console.log(`Time: ${new Date().toISOString()}`);
+      console.log(`IP: ${req.ip}`);
+
       try {
         const url = req.query.url;
+        console.log(`Requested URL: ${url}`);
+
         if (!url) {
+          console.log("Error: No URL provided");
           return res.status(400).json({ error: "URL parameter is required" });
         }
-        console.log("Fetching preview...");
+
+        console.log("Calling fetchPreview...");
         const preview = await fetchPreview(url);
+        console.log("Preview successful:", preview);
         res.json(preview);
       } catch (error) {
+        console.error("Route handler error:", {
+          message: error.message,
+          stack: error.stack,
+          code: error.code,
+        });
         res.status(500).json({ error: error.message });
       }
     });
